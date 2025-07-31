@@ -1,0 +1,17 @@
+# Environment variables
+.env
+
+# Database file
+data/gcp_guardian.db
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+
+# IDE/Editor specific files
+.vscode/
+.idea/
+
+# macOS specific files
+.DS_Store

@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+APScheduler
+passlib[bcrypt]
+python-jose[cryptography]
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+google-cloud-monitoring
+schedule
+python-dotenv
+SQLAlchemy
+python-multipart

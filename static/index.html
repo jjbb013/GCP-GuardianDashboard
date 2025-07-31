@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCP Guardian Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>GCP Guardian Dashboard</h1>
+            <button id="logoutButton">Logout</button>
+        </header>
+        
+        <main>
+            <div id="dashboard" class="dashboard-grid">
+                <!-- VM Status Card -->
+                <div class="card vm-status-card">
+                    <h3>VM Status</h3>
+                    <p><strong>Instance:</strong> <span id="vm-name">Loading...</span></p>
+                    <p><strong>Status:</strong> <span id="vm-status" class="status-badge">Loading...</span></p>
+                    <div class="actions">
+                        <button id="startButton" class="action-button">Start VM</button>
+                        <button id="shutdownButton" class="action-button">Shutdown VM</button>
+                    </div>
+                </div>
+
+                <!-- Traffic Card -->
+                <div class="card traffic-card">
+                    <h3>Monthly Egress Traffic</h3>
+                    <div class="progress-bar-container">
+                        <div id="progress-bar" class="progress-bar"></div>
+                    </div>
+                    <p id="traffic-details">Loading...</p>
+                </div>
+
+                <!-- Action Logs Card -->
+                <div class="card logs-card">
+                    <h3>Action Logs</h3>
+                    <ul id="action-logs">
+                        <li>Loading logs...</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
