@@ -41,13 +41,7 @@ class GcpService(CloudProvider):
                 creds_info, scopes=scopes
             )
             
-            proxy_info = httplib2.ProxyInfo(
-                proxy_type=httplib2.socks.PROXY_TYPE_HTTP,
-                proxy_host='127.0.0.1',
-                proxy_port=12334
-            )
-            
-            authed_http = AuthorizedHttp(credentials, http=httplib2.Http(proxy_info=proxy_info))
+            authed_http = AuthorizedHttp(credentials)
             
             compute_client = build('compute', 'v1', http=authed_http)
             monitoring_client = monitoring_v3.MetricServiceClient(credentials=credentials)
