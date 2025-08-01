@@ -5,18 +5,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    let servers = []; // To store the list of servers globally
+
     const fetchWithAuth = async (url, options = {}) => {
         const currentToken = localStorage.getItem('accessToken');
         if (!currentToken) {
             window.location.href = '/static/login.html';
             throw new Error('No token found, redirecting to login.');
         }
-
-        const headers = {
-            ...options.headers,
-            'Authorization': `Bearer ${currentToken}`
-        };
-
+        const headers = { ...options.headers, 'Authorization': `Bearer ${currentToken}` };
         const response = await fetch(url, { ...options, headers });
         if (response.status === 401) {
             localStorage.removeItem('accessToken');
@@ -26,47 +23,96 @@ document.addEventListener('DOMContentLoaded', function() {
         return response;
     };
 
-    const updateDashboard = async () => {
+    const createServerCard = (server) => {
+        const cardWrapper = document.createElement('div');
+        cardWrapper.className = 'server-card-wrapper';
+        cardWrapper.id = `server-card-${server.id}`;
+        
+        // The dashboard-grid class should contain the cards, not be the card itself.
+        cardWrapper.innerHTML = `
+            <div class="card-header">
+                <h2>${server.name}</h2>
+            </div>
+            <div class="dashboard-grid">
+                <!-- VM Status Card -->
+                <div class="card vm-status-card">
+                <h3>VM Status</h3>
+                <p><strong>Instance:</strong> <span id="vm-name-${server.id}">Loading...</span></p>
+                <p><strong>Status:</strong> <span id="vm-status-${server.id}" class="status-badge">Loading...</span></p>
+                <div class="actions">
+                    <button id="startButton-${server.id}" class="action-button">Start VM</button>
+                    <button id="shutdownButton-${server.id}" class="action-button">Shutdown VM</button>
+                </div>
+            </div>
+
+            <!-- Traffic Card -->
+            <div class="card traffic-card">
+                <h3>Monthly Egress Traffic</h3>
+                <div class="progress-bar-container">
+                    <div id="progress-bar-${server.id}" class="progress-bar"></div>
+                </div>
+                <p id="traffic-details-${server.id}">Loading...</p>
+                <div class="actions">
+                    <button id="refreshButton-${server.id}" class="action-button">Refresh Data</button>
+                </div>
+            </div>
+
+            <!-- Action Logs Card -->
+            <div class="card logs-card">
+                <h3>Action Logs</h3>
+                <ul id="action-logs-${server.id}">
+                    <li>Loading logs...</li>
+                </ul>
+            </div>
+        </div> 
+        `;
+        return cardWrapper;
+    };
+
+    const renderDashboardData = (server, data) => {
+        document.getElementById(`vm-name-${server.id}`).textContent = data.instance_name;
+        const statusBadge = document.getElementById(`vm-status-${server.id}`);
+        statusBadge.textContent = data.status;
+        statusBadge.className = 'status-badge';
+        if (data.status.toLowerCase() === 'running') statusBadge.classList.add('running');
+        else if (data.status.toLowerCase() === 'terminated') statusBadge.classList.add('terminated');
+        else statusBadge.classList.add('loading');
+        document.getElementById(`progress-bar-${server.id}`).style.width = `${data.traffic_usage_percent}%`;
+        document.getElementById(`traffic-details-${server.id}`).textContent = 
+            `${data.current_traffic_gb.toFixed(2)} GB / ${data.traffic_threshold_gb} GB (${data.traffic_usage_percent}%)`;
+    };
+
+    const updateDashboardForServer = async (server, force = false) => {
+        const cacheKey = `dashboardData-${server.id}`;
+        const cachedData = JSON.parse(localStorage.getItem(cacheKey));
+        const now = new Date().getTime();
+
+        if (!force && cachedData && (now - cachedData.timestamp < 3600000)) { // 1 hour cache
+            renderDashboardData(server, cachedData.data);
+            return;
+        }
+
         try {
-            const response = await fetchWithAuth('/api/v1/dashboard/status');
+            const response = await fetchWithAuth(`/api/v1/servers/${server.id}/status`);
             if (!response.ok) throw new Error(`Failed to fetch status: ${response.statusText}`);
             const data = await response.json();
-
-            document.getElementById('vm-name').textContent = data.instance_name;
-            
-            const statusBadge = document.getElementById('vm-status');
-            statusBadge.textContent = data.status;
-            statusBadge.className = 'status-badge'; // Reset classes
-            if (data.status.toLowerCase() === 'running') {
-                statusBadge.classList.add('running');
-            } else if (data.status.toLowerCase() === 'terminated') {
-                statusBadge.classList.add('terminated');
-            } else {
-                statusBadge.classList.add('loading');
-            }
-
-            const progressBar = document.getElementById('progress-bar');
-            progressBar.style.width = `${data.traffic_usage_percent}%`;
-            
-            document.getElementById('traffic-details').textContent = 
-                `${data.current_traffic_gb.toFixed(2)} GB / ${data.traffic_threshold_gb} GB (${data.traffic_usage_percent}%)`;
-
+            renderDashboardData(server, data);
+            localStorage.setItem(cacheKey, JSON.stringify({ data: data, timestamp: now }));
         } catch (error) {
-            console.error('Error updating dashboard:', error);
-            // Also display an error on the dashboard itself
-            document.getElementById('traffic-details').textContent = "Error loading data.";
+            console.error(`Error updating dashboard for ${server.id}:`, error);
+            document.getElementById(`traffic-details-${server.id}`).textContent = "Error loading data.";
         }
     };
 
-    const updateActionLogs = async () => {
+    const updateActionLogsForServer = async (server) => {
         try {
-            const response = await fetchWithAuth('/api/v1/logs/actions?limit=10');
+            const response = await fetchWithAuth(`/api/v1/logs/actions?server_id=${server.id}&limit=10`);
             if (!response.ok) throw new Error('Failed to fetch logs');
             const logs = await response.json();
-            const logsList = document.getElementById('action-logs');
+            const logsList = document.getElementById(`action-logs-${server.id}`);
             logsList.innerHTML = '';
             if (logs.length === 0) {
-                logsList.innerHTML = '<li>No actions logged yet.</li>';
+                logsList.innerHTML = '<li>No actions logged for this server.</li>';
                 return;
             }
             logs.forEach(log => {
@@ -76,44 +122,84 @@ document.addEventListener('DOMContentLoaded', function() {
                 logsList.appendChild(li);
             });
         } catch (error) {
-            console.error('Error updating action logs:', error);
+            console.error(`Error updating action logs for ${server.id}:`, error);
         }
     };
 
-    const handleVmAction = async (url, actionName) => {
-        if (!confirm(`Are you sure you want to ${actionName} the VM?`)) return;
+    const handleVmAction = async (server, action) => {
+        if (!confirm(`Are you sure you want to ${action} the VM for server ${server.name}?`)) return;
         try {
-            const response = await fetchWithAuth(url, { method: 'POST' });
+            const response = await fetchWithAuth(`/api/v1/servers/${server.id}/${action}`, { method: 'POST' });
             if (response.ok) {
-                alert(`VM ${actionName} initiated.`);
+                alert(`VM ${action} initiated for server ${server.name}.`);
                 setTimeout(() => {
-                    updateDashboard();
-                    updateActionLogs();
-                }, 3000); // Refresh after 3 seconds
+                    updateDashboardForServer(server, true);
+                    updateActionLogsForServer(server);
+                }, 3000);
             } else {
                 const error = await response.json();
                 alert(`Error: ${error.detail || 'Failed to perform action'}`);
             }
         } catch (error) {
-            console.error(`Error during ${actionName}:`, error);
+            console.error(`Error during ${action} for ${server.id}:`, error);
+        }
+    };
+
+    const initialize = async () => {
+        const container = document.getElementById('dashboard-container');
+        try {
+            const response = await fetchWithAuth('/api/v1/servers');
+            if (!response.ok) throw new Error('Failed to fetch servers');
+            servers = await response.json(); // Populate the global servers array
+            
+            container.innerHTML = '';
+            if (servers.length === 0) {
+                container.innerHTML = '<p>No servers configured. Please check your .env file.</p>';
+                return;
+            }
+
+            servers.forEach(server => {
+                const card = createServerCard(server);
+                container.appendChild(card);
+
+                // Add event listeners for the new card's buttons
+                document.getElementById(`startButton-${server.id}`).addEventListener('click', () => handleVmAction(server, 'start'));
+                document.getElementById(`shutdownButton-${server.id}`).addEventListener('click', () => handleVmAction(server, 'shutdown'));
+                document.getElementById(`refreshButton-${server.id}`).addEventListener('click', () => {
+                    updateDashboardForServer(server, true);
+                    updateActionLogsForServer(server);
+                });
+
+                // Initial data load for this card
+                updateDashboardForServer(server);
+                updateActionLogsForServer(server);
+            });
+
+        } catch (error) {
+            console.error("Failed to initialize dashboards:", error);
+            container.innerHTML = '<p>Error loading server configurations.</p>';
         }
     };
 
     document.getElementById('logoutButton').addEventListener('click', () => {
-        localStorage.removeItem('accessToken');
+        localStorage.clear(); // Clear all cache on logout
         window.location.href = '/static/login.html';
     });
 
-    document.getElementById('startButton').addEventListener('click', () => handleVmAction('/api/v1/vm/start', 'start'));
-    document.getElementById('shutdownButton').addEventListener('click', () => handleVmAction('/api/v1/vm/shutdown', 'shutdown'));
+    // Initial load
+    initialize();
 
-    // Initial data load
-    updateDashboard();
-    updateActionLogs();
-
-    // Refresh data every 30 seconds
+    // Set up periodic refresh for all servers
     setInterval(() => {
-        updateDashboard();
-        updateActionLogs();
-    }, 30000);
+        console.log("Periodic refresh for all servers...");
+        servers.forEach(server => {
+            updateDashboardForServer(server);
+        });
+    }, 3600000); // every hour
+
+    setInterval(() => {
+        servers.forEach(server => {
+            updateActionLogsForServer(server);
+        });
+    }, 300000); // every 5 minutes
 });

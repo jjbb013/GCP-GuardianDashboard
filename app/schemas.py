@@ -14,8 +14,14 @@ class TokenData(BaseModel):
 class User(BaseModel):
     username: str
 
+# --- Server Schemas ---
+class Server(BaseModel):
+    id: str
+    name: str
+
 # --- Log Schemas ---
 class ActionLogBase(BaseModel):
+    server_id: str
     action_type: str
     reason: Optional[str] = None
 
@@ -31,6 +37,7 @@ class ActionLog(ActionLogBase):
 
 # --- VM Status Schemas ---
 class VmStatus(BaseModel):
+    server_id: str
     instance_name: str
     status: str
     current_traffic_gb: float

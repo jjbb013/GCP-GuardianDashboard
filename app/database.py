@@ -15,6 +15,7 @@ Base = declarative_base()
 class TrafficLog(Base):
     __tablename__ = "traffic_logs"
     id = Column(Integer, primary_key=True, index=True)
+    server_id = Column(String, nullable=False, index=True)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     traffic_gb = Column(Float, nullable=False)
 
@@ -22,6 +23,7 @@ class TrafficLog(Base):
 class ActionLog(Base):
     __tablename__ = "action_logs"
     id = Column(Integer, primary_key=True, index=True)
+    server_id = Column(String, nullable=False, index=True)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     action_type = Column(String, nullable=False)
     reason = Column(String, nullable=True)
