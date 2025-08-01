@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.sql import func
 from .config import settings
@@ -10,6 +10,14 @@ os.makedirs(os.path.dirname(settings.DATABASE_URL.split("///")[1]), exist_ok=Tru
 engine = create_engine(settings.DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# Define the Server model for state tracking
+class Server(Base):
+    __tablename__ = "servers"
+    id = Column(String, primary_key=True, index=True) # Corresponds to ServerConfig.id
+    warning_sent_month = Column(String, nullable=True) # e.g., "2023-08"
+    shutdown_month = Column(String, nullable=True) # e.g., "2023-08"
+    auto_shutdown_active = Column(Boolean, default=False)
 
 # Define the TrafficLog model
 class TrafficLog(Base):

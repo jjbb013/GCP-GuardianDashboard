@@ -19,6 +19,19 @@ class Server(BaseModel):
     id: str
     name: str
 
+class ServerStateBase(BaseModel):
+    id: str
+    warning_sent_month: Optional[str] = None
+    shutdown_month: Optional[str] = None
+    auto_shutdown_active: bool = False
+
+class ServerStateCreate(ServerStateBase):
+    pass
+
+class ServerState(ServerStateBase):
+    class Config:
+        from_attributes = True
+
 # --- Log Schemas ---
 class ActionLogBase(BaseModel):
     server_id: str

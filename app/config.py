@@ -29,6 +29,11 @@ class Config:
         self.TRAFFIC_THRESHOLD_GB = float(os.getenv("TRAFFIC_THRESHOLD_GB", 100))
         self.DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/gcp_guardian.db")
         
+        # Notification and Alerting settings
+        self.BARK_URL = os.getenv("BARK_URL") # Optional: for Bark notifications
+        self.WARNING_THRESHOLD_PERCENT = float(os.getenv("WARNING_THRESHOLD_PERCENT", 75))
+        self.SHUTDOWN_THRESHOLD_PERCENT = float(os.getenv("SHUTDOWN_THRESHOLD_PERCENT", 95))
+
         # Auth settings
         self.ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
         self.ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")

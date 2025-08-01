@@ -18,6 +18,10 @@ GCP Guardian Dashboard 是一款自托管、支持多服务器的监控工具，
 - **自托管**: 您对自己的数据和基础设施拥有完全控制权。
 - **配置简单**: 所有设置均通过一个简单的 `.env` 文件进行管理。
 - **现代化前端**: 采用响应式设计，并包含一个可定制的动态粒子背景，以提供更佳的视觉体验。
+- **分级预警系统**:
+    - **75% 流量预警**: 当服务器流量达到总阈值的 75% 时，通过 Bark 发送预警通知。
+    - **95% 自动关机**: 当流量达到 95% 时，自动关闭虚拟机以防止超额，并发送通知。
+- **每月自动重启**: 在每个月的第一天中午 12 点，自动重启所有因流量超限而被关闭的虚拟机，并发送通知。
 
 ---
 
@@ -71,6 +75,15 @@ cp .env.example .env
 # --- 应用设置 ---
 TRAFFIC_THRESHOLD_GB=100
 DATABASE_URL=sqlite:///data/gcp_guardian.db
+
+# --- 通知与预警 (可选) ---
+# 你的 Bark URL，用于接收通知。留空则禁用通知功能。
+# 示例: https://api.day.app/your_bark_key
+BARK_URL=
+# 发送预警通知的流量使用百分比阈值。
+WARNING_THRESHOLD_PERCENT=75
+# 自动关闭虚拟机的流量使用百分比阈值。
+SHUTDOWN_THRESHOLD_PERCENT=95
 
 # --- 管理员凭证与安全 ---
 ADMIN_USERNAME=admin
@@ -151,6 +164,10 @@ GCP Guardian Dashboard is a self-hosted, multi-server monitoring tool designed t
 - **Action Logs**: Keeps a log of all automated and manual actions for auditing.
 - **Self-Hosted**: You have full control over your data and infrastructure.
 - **Easy Configuration**: All settings are managed through a simple `.env` file.
+- **Tiered Alerting System**:
+    - **75% Traffic Warning**: Sends a warning notification via Bark when a server's traffic reaches 75% of its total threshold.
+    - **95% Auto-Shutdown**: Automatically shuts down the VM at 95% traffic usage to prevent overages and sends a notification.
+- **Monthly Auto-Restart**: Automatically restarts all VMs that were shut down due to traffic limits at 12:00 PM on the first day of each month and sends a notification.
 
 ---
 
@@ -261,5 +278,29 @@ The application will be available at **http://127.0.0.1:8001**.
 - **Backend**: FastAPI, SQLAlchemy, APScheduler
 - **Frontend**: Vanilla JavaScript, HTML, CSS
 - **Database**: SQLite (default)
+
+---
+
+## 高级功能
+
+### 测试通知
+
+应用提供了一个 API 端点，用于测试您的 Bark 通知是否配置正确。在登录后，您可以使用 `curl` 或其他工具向以下地址发送 `POST` 请求：
+
+- **发送通用测试消息**:
+  ```bash
+  curl -X POST "http://127.0.0.1:8001/api/v1/notifications/test-bark" -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+  ```
+
+- **模拟 75% 预警通知**:
+  ```bash
+  curl -X POST "http://127.0.0.1:8001/api/v1/notifications/test-bark?scenario=warning" -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+  ```
+
+- **模拟 95% 关机通知**:
+  ```bash
+  curl -X POST "http://127.0.0.1:8001/api/v1/notifications/test-bark?scenario=shutdown" -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+  ```
+*请将 `YOUR_ACCESS_TOKEN` 替换为您从浏览器获取的有效令牌。*
 
 ---
